@@ -1,18 +1,20 @@
-import  { useState, useRef } from "react";
-import { db } from '../firebase'; 
-import { doc, setDoc,getDoc } from "firebase/firestore"; 
+import { useState, useRef } from "react";
+import { db } from "../firebase";
+import { addDoc, collection, getDocs, query, where } from "firebase/firestore";
 
 const Eyedropper = () => {
   const [selectedColor, setSelectedColor] = useState(null);
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState("");
+  const [colorName, setColorName] = useState("");
+  const [searchValue, setSearchValue] = useState("");
+  const [colorValues, setColorValues] = useState([]);
 
   const handleUsernameChange = (e) => {
     setUsername(e.target.value);
   };
 
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
+  const handleColorNameChange = (e) => {
+    setColorName(e.target.value);
   };
 
   const handleSubmit = async (e) => {
@@ -31,29 +33,61 @@ const Eyedropper = () => {
     //   .catch((error) => {
     //     console.error('Error saving user data:', error);
     //   });
-    await setDoc(doc(db, "colors","hashValue"), {
+    await addDoc(collection(db, "colors"), {
       username: username,
-      email: email,
-     
+      colorName: colorName.toLowerCase(),
+      colorCode: selectedColor,
     });
-
+    window.location.reload()
   };
 
-  const getData = async () =>{
-    const docRef = doc(db, "colors","hashValue");
-const docSnap = await getDoc(docRef);
+  const getData = async () => {
+        const docRef = collection(db, "colors");
+    const docSnap = await getDocs(docRef);
 
-if (docSnap.exists()) {
-  console.log("Document data:", docSnap.data());
-} else {
-  // docSnap.data() will be undefined in this case
-  console.log("No such document!");
-}
+    let array = []
+    docSnap.forEach((doc)=>{
+      // console.log(doc.data())
+      array.push(doc.data());
+      setColorValues(array);
+    })
 
-  }
+    // const q = query(collection(db, "colors"), where("colorName", "==", "red"));
 
+    // const querySnapshot = await getDocs(q);
+    // querySnapshot.forEach((doc) => {
+    //   // doc.data() is never undefined for query doc snapshots
+    //   console.log(doc.id, " => ", doc.data());
+    // });
 
+    // if (docSnap.exists()) {
+    //   console.log("Document data:", docSnap.data());
+    // } else {
+    //   // docSnap.data() will be undefined in this case
+    //   console.log("No such document!");
+    // }
+  };
 
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    console.log(searchValue);
+    const q = query(
+      collection(db, "colors"),
+      where("colorName", "==", searchValue)
+    );
+
+    const querySnapshot = await getDocs(q);
+    // setColorValues(querySnapshot)
+
+    let array = [];
+    querySnapshot.forEach((doc) => {
+      // doc.data() is never undefined for query doc snapshots
+      console.log(doc.id, " => ", doc.data());
+      array.push(doc.data());
+      setColorValues(array);
+    });
+    // console.log(colorValues,"colorvdsf")
+  };
 
   const canvasRef = useRef(null);
 
@@ -154,45 +188,103 @@ if (docSnap.exists()) {
   };
 
   return (
-    <div style={{ overflow: "hidden" }}>
-      <input
-        type="file"
-        ref={inputRef}
-        accept="image/*"
-        onChange={handleFileSelect}
-      />
-
-      <div style={{ position: "relative" }}>
-        <canvas
-          ref={canvasRef}
-          onClick={handleCanvasClick}
-          style={{ cursor: "crosshair", display: "block" }}
+    <div style={{ display: "flex", gap: "100px" }}>
+      <div style={{ overflow: "hidden" }}>
+        <input
+          type="file"
+          ref={inputRef}
+          accept="image/*"
+          onChange={handleFileSelect}
         />
-      </div>
 
-      {selectedColor && (
-        <div style={{ marginTop: "10px" }}>
-          Selected Color:{" "}
-          <span style={{ color: selectedColor }}>{selectedColor}</span>
+        <div style={{ position: "relative" }}>
+          <canvas
+            ref={canvasRef}
+            onClick={handleCanvasClick}
+            style={{ cursor: "crosshair", display: "block" }}
+          />
         </div>
-      )}
 
-<div>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Username:
-          <input type="text" value={username} onChange={handleUsernameChange} />
-        </label>
-        <br />
-        <label>
-          Email:
-          <input type="email" value={email} onChange={handleEmailChange} />
-        </label>
-        <br />
-        <button type="submit">Save</button>
-      </form>
-      <button onClick={getData}>Get Data</button>
-    </div>
+        {selectedColor && (
+          <div style={{ marginTop: "10px" }}>
+            Selected Color:{" "}
+            <span style={{ color: selectedColor }}>{selectedColor}</span>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: "20px" }}>
+          <div>
+            <form onSubmit={handleSubmit}>
+              <label>Username</label>
+              <br />
+              <input
+                type="text"
+                value={username}
+                onChange={handleUsernameChange}
+              />
+              <br />
+              <label>Color</label>
+              <br />
+              <input
+                type="text"
+                value={colorName}
+                onChange={handleColorNameChange}
+              />
+              <br />
+              <label>Color code</label>
+              <br />
+              <input type="text" readOnly value={selectedColor || ""} />
+              <br />
+              <button type="submit" style={{ marginTop: "10px" }}>
+                Save
+              </button>
+            </form>
+          </div>
+          <div style={{ display: "flex", flexDirection: "row" }}>
+            <form onSubmit={handleSearch}>
+              <label> Search by color</label>
+              <br />
+              <input
+                type="text"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+              />
+              <br />
+              <button type="submit" style={{ marginTop: "10px" }}>
+                Search
+              </button>
+            </form>
+
+            <button
+              onClick={getData}
+              style={{ height: "40px", marginTop: "20px", marginLeft: "10px" }}
+            >
+              Get all colors
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          top: "90px",
+          right: "60px",
+          height: "580px",
+          background: "white",
+          width: "250px",
+          overflowY:"scroll"
+        }}
+      >
+        <h2 style={{ textDecoration: "underline", color: "black" }}>Colors</h2>
+        {colorValues.map((color) => (
+          // eslint-disable-next-line react/jsx-key
+          <div style={{background:"black",textAlign:"left"}}>
+            <h4>User : {color.username}</h4>
+            <h4>Color : {color.colorName}</h4>
+            <h4>Color code : {color.colorCode}</h4>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
