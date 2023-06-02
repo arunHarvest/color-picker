@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
 import { db } from "../firebase";
-import { addDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from "firebase/firestore";
 
 const Eyedropper = () => {
-  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedColor, setSelectedColor] = useState("");
   const [username, setUsername] = useState("");
   const [colorName, setColorName] = useState("");
+
   const [searchValue, setSearchValue] = useState("");
   const [colorValues, setColorValues] = useState([]);
 
@@ -33,24 +34,36 @@ const Eyedropper = () => {
     //   .catch((error) => {
     //     console.error('Error saving user data:', error);
     //   });
-    await addDoc(collection(db, "colors"), {
-      username: username,
-      colorName: colorName.toLowerCase(),
-      colorCode: selectedColor,
-    });
-    window.location.reload()
+
+    if (username && colorName && selectedColor !== "") {
+      await addDoc(collection(db, "colors"), {
+        username: username,
+        colorName: colorName.toLowerCase(),
+        colorCode: selectedColor,
+      });
+      window.location.reload();
+    } else {
+      alert("Please fill all the required fields");
+    }
   };
 
   const getData = async () => {
-        const docRef = collection(db, "colors");
+    const docRef = collection(db, "colors");
     const docSnap = await getDocs(docRef);
 
-    let array = []
-    docSnap.forEach((doc)=>{
+    let array = [];
+    docSnap.forEach((doc) => {
       // console.log(doc.data())
-      array.push(doc.data());
+      
+      const body = {
+        id: doc.id,
+        data: doc.data(),
+      };
+      array.push(body);
       setColorValues(array);
-    })
+    });
+
+    
 
     // const q = query(collection(db, "colors"), where("colorName", "==", "red"));
 
@@ -83,11 +96,24 @@ const Eyedropper = () => {
     querySnapshot.forEach((doc) => {
       // doc.data() is never undefined for query doc snapshots
       console.log(doc.id, " => ", doc.data());
-      array.push(doc.data());
+      const body = {
+        id: doc.id,
+        data: doc.data(),
+      };
+      array.push(body);
       setColorValues(array);
     });
     // console.log(colorValues,"colorvdsf")
   };
+
+  const handleDelete = async (id) =>{
+    await deleteDoc(doc(db, "colors", id));
+    getData()
+
+
+
+
+  }
 
   const canvasRef = useRef(null);
 
@@ -215,7 +241,7 @@ const Eyedropper = () => {
         <div style={{ display: "flex", gap: "20px" }}>
           <div>
             <form onSubmit={handleSubmit}>
-              <label>Username</label>
+              <label>Enter your name*</label>
               <br />
               <input
                 type="text"
@@ -223,7 +249,7 @@ const Eyedropper = () => {
                 onChange={handleUsernameChange}
               />
               <br />
-              <label>Color</label>
+              <label>Enter a color name*</label>
               <br />
               <input
                 type="text"
@@ -231,11 +257,18 @@ const Eyedropper = () => {
                 onChange={handleColorNameChange}
               />
               <br />
-              <label>Color code</label>
+              <label>Selected color code*</label>
               <br />
               <input type="text" readOnly value={selectedColor || ""} />
               <br />
-              <button type="submit" style={{ marginTop: "10px" }}>
+              <button
+                type="submit"
+                style={{
+                  marginTop: "10px",
+                  color: "white",
+                  background: "blue",
+                }}
+              >
                 Save
               </button>
             </form>
@@ -250,14 +283,27 @@ const Eyedropper = () => {
                 onChange={(e) => setSearchValue(e.target.value)}
               />
               <br />
-              <button type="submit" style={{ marginTop: "10px" }}>
+              <button
+                type="submit"
+                style={{
+                  marginTop: "10px",
+                  color: "white",
+                  background: "blue",
+                }}
+              >
                 Search
               </button>
             </form>
 
             <button
               onClick={getData}
-              style={{ height: "40px", marginTop: "20px", marginLeft: "10px" }}
+              style={{
+                height: "40px",
+                marginTop: "20px",
+                marginLeft: "10px",
+                color: "white",
+                background: "blue",
+              }}
             >
               Get all colors
             </button>
@@ -272,16 +318,38 @@ const Eyedropper = () => {
           height: "580px",
           background: "white",
           width: "250px",
-          overflowY:"scroll"
+          overflowY: "scroll",
         }}
       >
-        <h2 style={{ textDecoration: "underline", color: "black" }}>Colors</h2>
-        {colorValues.map((color) => (
+        <h2 style={{ textDecoration: "underline", color: "black" }}>
+          Created colors
+        </h2>
+        {colorValues.map((color, index) => (
           // eslint-disable-next-line react/jsx-key
-          <div style={{background:"black",textAlign:"left"}}>
-            <h4>User : {color.username}</h4>
-            <h4>Color : {color.colorName}</h4>
-            <h4>Color code : {color.colorCode}</h4>
+          <div
+            key={index}
+            style={{
+              textAlign: "left",
+              boxShadow: "20px 20px 50px 10px #caf0f8 inset",
+              marginBottom: "30px",
+              padding: "15px",
+              margin: "10px",
+            }}
+          >
+            <img
+              src="./delete.png"
+              style={{
+                height: "30px",
+                width: "30px",
+                marginLeft: "160px",
+                cursor: "pointer",
+              }}
+              data-value={color.id}
+              onClick={(event) => handleDelete(event.target.getAttribute("data-value"))}
+            ></img>
+            <h4>Name : {color.data.username}</h4>
+            <h4>Color name : {color.data.colorName}</h4>
+            <h4>Color code : {color.data.colorCode}</h4>
           </div>
         ))}
       </div>
