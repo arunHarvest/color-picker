@@ -9,6 +9,7 @@ const Eyedropper = () => {
 
   const [searchValue, setSearchValue] = useState("");
   const [colorValues, setColorValues] = useState([]);
+  const [errorMessage,setErrorMessage] = useState("")
 
   const handleUsernameChange = (e) => {
     setUsername(e.target.value);
@@ -60,8 +61,14 @@ const Eyedropper = () => {
         data: doc.data(),
       };
       array.push(body);
-      setColorValues(array);
+      
     });
+    if(array.length === 0){
+      setErrorMessage("No colors found!")
+    }else{
+
+      setColorValues(array);
+    }
 
     
 
@@ -101,14 +108,20 @@ const Eyedropper = () => {
         data: doc.data(),
       };
       array.push(body);
-      setColorValues(array);
     });
+    if(array.length === 0){
+      setErrorMessage("No color matches found!")
+    }else{
+
+      setColorValues(array);
+    }
     // console.log(colorValues,"colorvdsf")
   };
 
   const handleDelete = async (id) =>{
     await deleteDoc(doc(db, "colors", id));
-    getData()
+    window.location.reload()
+    // await getData()
 
 
 
@@ -324,6 +337,8 @@ const Eyedropper = () => {
         <h2 style={{ textDecoration: "underline", color: "black" }}>
           Created colors
         </h2>
+        {errorMessage ? 
+        <h3 style={{color:"red"}}>{errorMessage}</h3> : ""}
         {colorValues.map((color, index) => (
           // eslint-disable-next-line react/jsx-key
           <div
